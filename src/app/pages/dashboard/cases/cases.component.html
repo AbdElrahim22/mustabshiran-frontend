@@ -1,0 +1,265 @@
+<div class="page-header">
+  <h2>حالات الاستكشاف</h2>
+  <div class="header-actions">
+    <input type="text" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="🔍 بحث عن حالة..." class="search-input">
+    @if (selectedRegion()) {
+      <button class="btn btn-outline" (click)="exportExcel()">Excel</button>
+      <button class="btn btn-outline" (click)="exportPdf()">PDF</button>
+    }
+    @if (isAdmin()) {
+      <button class="btn btn-danger" (click)="deleteAll()">حذف جميع الحالات</button>
+    }
+    <button class="btn btn-primary" (click)="openAdd()">+ إضافة حالة</button>
+  </div>
+</div>
+
+@if (loading) { <div class="spinner"></div> }
+
+<div class="cases-container">
+  @if (!selectedRegion()) {
+    <div class="admin-grid">
+      @for (group of groupedCases(); track group.region) {
+        <div class="admin-card" (click)="selectRegion(group.region)">
+          <div class="card-glow"></div>
+          <div class="card-content">
+             <div class="admin-icon">📍</div>
+             <div class="admin-info">
+               <h3>حالات {{ group.region }}</h3>
+               <span class="case-count">{{ group.cases.length }} حالات مسجلة</span>
+             </div>
+             <div class="arrow-hint">←</div>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state">لا توجد حالات استكشاف حالياً</div>
+      }
+    </div>
+  } @else {
+    @let group = selectedRegionGroup();
+    <div class="detail-view">
+      <div class="detail-header">
+        <button class="btn-back" (click)="clearSelection()">
+          <span class="icon">→</span> العودة للقائمة
+        </button>
+        <h2>عرض حالات المنطقة: <span>{{ group?.region }}</span></h2>
+        
+        <div class="support-filter">
+          <label class="filter-label">🔍 نوع الدعم:</label>
+          <div class="support-buttons-scroll">
+            <button
+              (click)="supportFilter.set('الكل')"
+              [style.background]="supportFilter() === 'الكل' ? 'var(--primary)' : 'var(--bg-dark)'"
+              [style.color]="supportFilter() === 'الكل' ? '#fff' : 'var(--text-secondary)'"
+              style="padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); white-space: nowrap; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; flex-shrink: 0;">
+              الكل
+            </button>
+          @for (type of availableSupportTypes(); track type) {
+              <button
+                (click)="supportFilter.set(type); currentPage.set(1)"
+                [style.background]="supportFilter() === type ? 'var(--primary)' : 'var(--bg-dark)'"
+                [style.color]="supportFilter() === type ? '#fff' : 'var(--text-secondary)'"
+                style="padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); white-space: nowrap; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; flex-shrink: 0;">
+                {{ type }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="stats-badge">{{ group?.cases?.length }} حالات</div>
+      </div>
+
+      <div class="cases-table-container">
+        <div class="cases-table" id="exportable-cases">
+          <div class="table-header">
+            <div class="col name">الاسم / القومي</div>
+            <div class="col family">بيانات الأسرة</div>
+            <div class="col metadata">التفاصيل / الدخل</div>
+            <div class="col explorer">المستكشف / التواصل</div>
+            <div class="col status">الحالة</div>
+            <div class="col actions">إجراءات</div>
+          </div>
+          
+          @for (c of group?.cases; track c.id) {
+            <div class="table-row">
+              <div class="col name" style="display: flex; flex-direction: column; gap: 6px;">
+                <span class="full-name" style="font-weight: 700; color: #fff;">{{ c.fullName }}</span>
+                <span class="national-id" style="color: var(--text-secondary); font-family: monospace; font-size: 0.9rem;">{{ c.nationalId }}</span>
+              </div>
+              <div class="col family" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem;">
+                <span style="color: #cbd5e1;">الزوج: {{ c.husbandName || 'غير متوفر' }} <span style="color:#94a3b8">({{ c.husbandJob || 'بدون عمل' }})</span></span>
+                <span style="color: #cbd5e1; white-space: pre-wrap; line-height: 1.4; word-break: break-all; overflow-wrap: anywhere;">الأبناء: {{ c.childrenDetails || 'غير متوفر' }}</span>
+                <span style="color: #94a3b8; margin-top: 4px;">العدد الكلي: <b>{{ c.familyMembersCount }}</b> أفراد</span>
+              </div>
+              <div class="col metadata" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem;">
+                <span class="tag eligibility" style="width: fit-content;">استحقاق: <b>{{ c.eligibility || '—' }}</b></span>
+                <span class="tag support" style="width: fit-content;">دعم: <b>{{ c.requiredSupport || '—' }}</b></span>
+                <span style="color: #cbd5e1; display: inline-block; width: fit-content;">الدخل: {{ c.incomeSource || 'غير متوفر' }}</span>
+                <span style="color: #94a3b8; margin-top: 4px; line-height: 1.4; word-break: break-all; overflow-wrap: anywhere;">تفاصيل: {{ c.caseDetails || 'لا يوجد' }}</span>
+                @if (c.images && c.images.length > 0) {
+                  <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                    @for (img of c.images; track img) {
+                      <a [href]="getImgUrl(img)" target="_blank" title="عرض الصورة">
+                        <img [src]="getImgUrl(img)" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" (error)="$any($event.target).style.display='none'" />
+                      </a>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="col explorer" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem;">
+                <span style="color: #60a5fa; font-weight: bold;">👤 المستكشف: {{ c.createdByUserName || 'غير معروف' }}</span>
+                <span style="color: #cbd5e1;">📞 {{ c.phoneNumber || 'غير متوفر' }}</span>
+                <span style="color: #94a3b8; line-height: 1.4;">📍 {{ c.region || c.address || 'غير متوفر' }}</span>
+              </div>
+              <div class="col status">
+                <span [class]="statusClass(c.status)" style="margin-bottom: 8px; display: inline-block;">{{ statusLabel(c.status) }}</span>
+                <select class="status-select-mini" [value]="c.status" (change)="updateStatus(c.id, $any($event.target).value)" style="width: 100%;">
+                  @for (s of statuses; track s.value) {
+                    <option [value]="s.value" [selected]="c.status === s.value">{{ s.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="col actions">
+                <button class="btn-icon" (click)="openEdit(c)" title="تعديل">✏️</button>
+                <button class="btn-icon danger" (click)="delete(c.id)" title="حذف">🗑️</button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="pagination-wrapper">
+          <button (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 1"
+            style="padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); cursor: pointer; transition: all 0.2s;"
+            [style.opacity]="currentPage() === 1 ? '0.4' : '1'">
+            ‹ السابق
+          </button>
+
+          @for (p of [].constructor(totalPages()); track $index) {
+            <button (click)="goToPage($index + 1)"
+              [style.background]="currentPage() === $index + 1 ? 'var(--primary)' : 'var(--bg-dark)'"
+              [style.color]="currentPage() === $index + 1 ? '#fff' : 'var(--text-secondary)'"
+              style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">
+              {{ $index + 1 }}
+            </button>
+          }
+
+          <button (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() === totalPages()"
+            style="padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); cursor: pointer; transition: all 0.2s;"
+            [style.opacity]="currentPage() === totalPages() ? '0.4' : '1'">
+            التالي ›
+          </button>
+
+          <span style="color: var(--text-secondary); font-size: 0.85rem;">
+            صفحة {{ currentPage() }} من {{ totalPages() }} | إجمالي {{ filteredRegionCases().length }} حالة
+          </span>
+        </div>
+      }
+
+    </div>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal-box wide" (click)="$event.stopPropagation()">
+      <h2>{{ editingCase ? 'تعديل الحالة' : 'إضافة حالة جديدة' }}</h2>
+      <form (ngSubmit)="submit()" class="case-form">
+        <div class="form-row">
+          <div class="form-group"><label>الاسم الكامل</label><input type="text" [(ngModel)]="form.fullName" name="fullName" #afname="ngModel" required /></div>
+          <div class="form-group" style="width: 100%;">
+            <label>رقم الهاتف (١١ رقم)</label>
+            <input type="tel" [(ngModel)]="form.phoneNumber" name="phoneNumber" 
+                   #aphone="ngModel" required minlength="11" maxlength="11" pattern="^[0-9]{11}$" />
+            @if (aphone.invalid && (aphone.dirty || aphone.touched)) {
+              <div class="error-text">يجب إدخال ١١ رقم موبايل بشكل صحيح</div>
+            }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>الرقم القومي (١٤ رقم)</label>
+            <input type="text" [(ngModel)]="form.nationalId" name="nationalId" 
+                   #anid="ngModel" required minlength="14" maxlength="14" pattern="^[0-9]{14}$" />
+            @if (anid.invalid && (anid.dirty || anid.touched)) {
+              <div class="error-text">يجب إدخال ١٤ رقم قومي بشكل صحيح</div>
+            }
+          </div>
+          <div class="form-group"><label>المنطقة / العنوان</label><input type="text" [(ngModel)]="form.region" name="region" required /></div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group"><label>اسم الزوج</label><input type="text" [(ngModel)]="form.husbandName" name="husbandName" /></div>
+          <div class="form-group"><label>وظيفة الزوج</label><input type="text" [(ngModel)]="form.husbandJob" name="husbandJob" /></div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group"><label>عدد أفراد الأسرة</label><input type="number" [(ngModel)]="form.familyMembersCount" name="familyMembersCount" min="1" required /></div>
+          <div class="form-group"><label>مصدر الدخل</label><input type="text" [(ngModel)]="form.incomeSource" name="incomeSource" /></div>
+        </div>
+
+        <div class="form-group"><label>أسماء وأعمار الأبناء</label><textarea [(ngModel)]="form.childrenDetails" name="childrenDetails" rows="2" placeholder="مثال: أحمد 5، محمود 10"></textarea></div>
+
+        <div class="form-group"><label>تفاصيل الحالة</label><textarea [(ngModel)]="form.caseDetails" name="caseDetails" rows="2"></textarea></div>
+
+        <div class="form-row">
+          <div class="form-group"><label>استحقاقية الحالة</label>
+            <select [(ngModel)]="form.eligibility" name="eligibility" class="form-control" required>
+              <option value="" disabled>-- اختر درجة الاستحقاق --</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الدعم المطلوب</label>
+            <select [(ngModel)]="form.requiredSupport" name="requiredSupport" class="form-control" required>
+              <option value="" disabled>-- اختر الدعم المطلوب --</option>
+              <option value="أسقف">أسقف</option>
+              <option value="وصلات مياه">وصلات مياه</option>
+              <option value="شنط رمضان">شنط رمضان</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          @if (editingCase?.images && editingCase!.images!.length > 0) {
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">الصور المرفوعة مسبقاً</label>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                @for (img of editingCase!.images; track img) {
+                  <a [href]="'https://localhost:7147' + img" target="_blank">
+                    <img [src]="'https://localhost:7147' + img" style="height: 80px; width: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);" />
+                  </a>
+                }
+              </div>
+            </div>
+          }
+          <label>صور إثبات الحالة (إضافة المزيد)</label>
+          <input type="file" multiple (change)="onFileSelected($event)" accept="image/*" class="form-control" style="background: var(--bg-dark); padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;" />
+          <small style="color: var(--text-secondary); display: block; margin-top: 5px;">يمكنك اختيار أكثر من صورة (اختر تباعاً أو حدد عدة صور)</small>
+          
+          @if (selectedFiles.length > 0) {
+            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+              @for (f of selectedFiles; track f.name) {
+                <div style="background: var(--bg-card); padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 5px; font-size: 0.8rem; border: 1px solid var(--border);">
+                  <span>{{ f.name }}</span>
+                  <button type="button" (click)="removeSelectedFile(f)" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showModal = false">إلغاء</button>
+          <button type="submit" class="btn btn-primary" 
+                  [disabled]="submitting || afname.invalid || anid.invalid || aphone.invalid || !form.requiredSupport || !form.eligibility">
+            {{ submitting ? 'جاري...' : 'حفظ' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

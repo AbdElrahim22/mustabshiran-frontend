@@ -1,0 +1,587 @@
+<!-- ─── Navbar ─────────────────────────────────────────────────────── -->
+<header class="navbar">
+  <div class="container nav-inner">
+    <div class="logo" routerLink="/home" style="cursor: pointer;">
+      <span class="logo-icon">☪</span>
+      <span class="logo-text">مستبشرا</span>
+    </div>
+    <nav class="nav-links desktop-only">
+      <button class="btn-theme-toggle" (click)="theme.toggleTheme()" [title]="theme.isDark() ? 'تبديل للوضع الفاتح' : 'تبديل للوضع الداكن'">
+        {{ theme.isDark() ? '☀️' : '🌙' }}
+      </button>
+
+      @if (authService.isLoggedIn()) {
+        <span class="user-greeting">أهلاً، {{ authService.currentUser()?.fullName }}</span>
+        @if (authService.isAnyAdmin()) {
+          <a routerLink="/dashboard" class="btn btn-outline btn-sm">لوحة التحكم</a>
+        }
+        <button class="btn btn-sm" (click)="authService.logout()">تسجيل الخروج</button>
+      } @else {
+        <a routerLink="/auth/login" class="btn btn-outline btn-sm">تسجيل الدخول</a>
+        <a routerLink="/auth/register" class="btn btn-accent btn-sm">حساب جديد</a>
+      }
+    </nav>
+    <div class="mobile-only">
+      <button class="hamburger-btn" (click)="mobileMenuOpen = !mobileMenuOpen">☰</button>
+    </div>
+  </div>
+  
+  @if (mobileMenuOpen) {
+  <div class="mobile-dropdown dropdown-anim">
+    <div class="container mobile-dropdown-inner">
+      <div style="display:flex; justify-content: space-between; align-items:center; width: 100%;">
+        <button class="btn-theme-toggle" (click)="theme.toggleTheme()" [title]="theme.isDark() ? 'تبديل للوضع الفاتح' : 'تبديل للوضع الداكن'">
+          {{ theme.isDark() ? '☀️' : '🌙' }}
+        </button>
+        @if (authService.isLoggedIn()) {
+          <span class="user-greeting">أهلاً، {{ authService.currentUser()?.fullName }}</span>
+        }
+      </div>
+      
+      @if (authService.isLoggedIn()) {
+        @if (authService.isAnyAdmin()) {
+          <a routerLink="/dashboard" class="btn btn-outline btn-sm btn-block-m mt-2">لوحة التحكم</a>
+        }
+        <button class="btn btn-primary btn-sm btn-block-m mt-2" (click)="authService.logout(); mobileMenuOpen = false">تسجيل الخروج</button>
+      } @else {
+        <a routerLink="/auth/login" class="btn btn-outline btn-sm btn-block-m mt-2" (click)="mobileMenuOpen = false">تسجيل الدخول</a>
+        <a routerLink="/auth/register" class="btn btn-accent btn-sm btn-block-m mt-2" (click)="mobileMenuOpen = false">حساب جديد</a>
+      }
+    </div>
+  </div>
+  }
+</header>
+
+<!-- ─── Hero ──────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container hero-content">
+    <div class="hero-badge">
+      <span>❤️</span>
+      <span>جمعية مستبشرا الخيرية</span>
+    </div>
+    <h1 class="hero-title">
+      كن سبباً في<br>
+      <span class="highlight">تغيير حياة</span> إنسان
+    </h1>
+    <p class="hero-subtitle">
+      ساهم معنا في تسجيل الحالات التي تحتاج للدعم، لنصل معاً لكل محتاج.
+    </p>
+
+    <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-num">١٢٠+</span>
+        <span class="stat-label">أسرة استفادت</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">٥٠+</span>
+        <span class="stat-label">مشروع منجز</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">٣</span>
+        <span class="stat-label">محافظات</span>
+      </div>
+    </div>
+
+    @if (!authService.isLoggedIn()) {
+      <div class="hero-cta">
+        <p class="cta-text">سجل معنا الآن للمشاركة في استكشاف الحالات وإضافة بيانات المحتاجين</p>
+        <div class="cta-btns">
+          <a routerLink="/auth/register" class="btn btn-accent btn-lg">إنشاء حساب جديد</a>
+          <a routerLink="/auth/login" class="btn btn-outline btn-lg">تسجيل الدخول</a>
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- ─── My Cases Section (System Admin & Users) ─────────────────────── -->
+@if (authService.isLoggedIn() && (authService.isAdmin() || authService.isUser())) {
+  <section class="cases-section">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2>حالات الاستكشاف الخاصة بي</h2>
+          <p>يمكنك إضافة، تعديل، أو حذف حالات الاستكشاف التي قمت بتسجيلها</p>
+        </div>
+        <button class="btn btn-primary" (click)="openAdd()">
+          <span>➕</span> إضافة حالة جديدة
+        </button>
+      </div>
+
+      @if (loading) {
+        <div class="loading-state">جاري تحميل الحالات...</div>
+      } @else if (cases.length === 0) {
+        <div class="empty-state">
+          <span>📂</span>
+          <p>لم تقم بإضافة أي حالات حتى الآن. ابدأ بإضافة حالتك الأولى!</p>
+        </div>
+      } @else {
+        <div class="date-cards-grid">
+          @for (group of groupedCases; track group.date) {
+            <div class="date-card" (click)="openDateDetails(group.date)">
+              <div class="date-header">
+                <span class="calendar-icon">📅</span>
+              </div>
+              <div class="date-body">
+                <h3 class="date-text">{{ group.date }}</h3>
+                <span class="cases-count">{{ group.cases.length }} {{ group.cases.length === 1 ? 'حالة' : 'حالات' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+}
+
+<!-- ─── Donation Items Section (Restricted Admins Only) ────────────── -->
+@if (authService.isLoggedIn() && authService.isRestrictedAdmin()) {
+  <section class="donation-items-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="header-text">
+          <h2>بنود التبرع المتاحة</h2>
+          <p>اختر البند الذي ترغب في تسجيل تبرع جديد فيه</p>
+        </div>
+        <div class="header-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" [(ngModel)]="searchQuery" placeholder="ابحث عن بند (مثلاً: أسقف، مياه)..." class="search-input">
+            @if (searchQuery) {
+              <button class="clear-btn" (click)="searchQuery = ''">×</button>
+            }
+          </div>
+          <button class="btn btn-outline" type="button" (click)="downloadCategoriesPDF()" style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 1.2rem; border-radius: 12px; font-weight: bold; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='rgba(99, 102, 241, 0.5)'; this.style.boxShadow='0 0 10px rgba(99, 102, 241, 0.15)'" onmouseout="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+            <span style="font-size: 1.1rem; color: #ef4444;">📕</span> تنزيل التقرير (PDF)
+          </button>
+        </div>
+      </div>
+
+      @if (loading) {
+        <div class="loading-state">جاري تحميل البنود...</div>
+      } @else {
+      <div class="items-grid">
+        @for (item of getFilteredCategories(); track item.id) {
+        <div class="item-card" (click)="openDonation(item)">
+          <div class="item-img" [class.svg-holder]="!getCategoryImg(item) || item.name.includes('رمضان') || item.name.includes('فوم') || item.name.includes('أضحية') || item.name.includes('اضحيه') || item.name.includes('إيجار') || item.name.includes('ايجار') || item.name.includes('ماليات')"
+               [style.background]="(item.name.includes('رمضان') || item.name.includes('فوم') || item.name.includes('أضحية') || item.name.includes('اضحيه') || item.name.includes('إيجار') || item.name.includes('ايجار') || item.name.includes('ماليات')) ? '#fff' : ''">
+            @if (getCategoryImg(item) && !item.name.includes('رمضان') && !item.name.includes('فوم') && !item.name.includes('أضحية') && !item.name.includes('اضحيه') && !item.name.includes('إيجار') && !item.name.includes('ايجار') && !item.name.includes('ماليات')) {
+              <img [src]="getCategoryImg(item)" [alt]="item.name" (error)="onImageError($event)">
+            } @else {
+              @if (item.name.includes('ماليات')) {
+                <!-- Pending/Unreceived Finances Illustration (Vibrant Teal Clock and Wallet) -->
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
+                  <circle cx="32" cy="32" r="28" fill="#14B8A6" fill-opacity="0.1"/>
+                  <rect x="18" y="24" width="28" height="20" rx="3" fill="#0D9488"/>
+                  <path d="M40 34H46V28H40V34Z" fill="#2DD4BF"/>
+                  <circle cx="43" cy="31" r="1.5" fill="#fff"/>
+                  <circle cx="32" cy="32" r="20" stroke="#0F766E" stroke-dasharray="4 2" stroke-width="2"/>
+                  <circle cx="32" cy="32" r="20" fill="none"/>
+                  <path d="M32 18V32L40 36" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              } @else if (item.name.includes('رمضان')) {
+                <!-- Large Orange Ramadan Bag Illustration -->
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
+                  <path d="M12 25H52L56 58H8L12 25Z" fill="#F59E0B"/>
+                  <path d="M22 25V15C22 10 26 6 32 6C38 6 42 10 42 15V25" stroke="#D97706" stroke-width="4"/>
+                  <circle cx="32" cy="42" r="8" fill="#FEF3C7"/>
+                  <path d="M32 38C34 38 36 39.5 36 42C36 44.5 34 46 32 46C30 46 28 44.5 28 42C28 39.5 30 38 32 38Z" fill="#F59E0B"/>
+                </svg>
+              } @else if (item.name.includes('فوم')) {
+                <!-- Large Blue Mosque Foam Illustration -->
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
+                  <rect x="5" y="20" width="54" height="35" rx="4" fill="#60A5FA" fill-opacity="0.2"/>
+                  <rect x="5" y="20" width="54" height="12" rx="2" fill="#60A5FA"/>
+                  <rect x="10" y="38" width="44" height="3" fill="#3B82F6" fill-opacity="0.4"/>
+                  <rect x="10" y="46" width="44" height="3" fill="#3B82F6" fill-opacity="0.4"/>
+                  <rect x="10" y="54" width="44" height="3" fill="#3B82F6" fill-opacity="0.4"/>
+                </svg>
+              } @else if (item.name.includes('أضحية') || item.name.includes('اضحيه') || item.name.includes('ذبح')) {
+                <!-- Large Sacrifice Illustration -->
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
+                  <path d="M15 35C10 35 5 25 15 25C20 25 20 35 15 35Z" fill="#9CA3AF"/>
+                  <path d="M49 35C54 35 59 25 49 25C44 25 44 35 49 35Z" fill="#9CA3AF"/>
+                  <rect x="20" y="20" width="24" height="30" rx="12" fill="#F3F4F6"/>
+                  <circle cx="26" cy="18" r="8" fill="#E5E7EB"/>
+                  <circle cx="38" cy="18" r="8" fill="#E5E7EB"/>
+                  <circle cx="32" cy="14" r="8" fill="#E5E7EB"/>
+                  <circle cx="26" cy="30" r="2" fill="#374151"/>
+                  <circle cx="38" cy="30" r="2" fill="#374151"/>
+                  <path d="M32 40l-3 4m3-4l3 4" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="32" cy="38" r="2" fill="#FCA5A5"/>
+                </svg>
+              } @else if (item.name.includes('إيجار') || item.name.includes('ايجار')) {
+                <!-- Large Rent Illustration -->
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 160px; height: 160px;">
+                  <path d="M10 50V25L32 10L54 25V50" stroke="#3B82F6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="26" y="35" width="12" height="15" fill="#3B82F6"/>
+                  <circle cx="35" cy="42" r="1.5" fill="#fff"/>
+                  <rect x="18" y="28" width="6" height="6" fill="#93C5FD"/>
+                  <rect x="40" y="28" width="6" height="6" fill="#93C5FD"/>
+                  <circle cx="48" cy="40" r="8" fill="#FACC15"/>
+                  <text x="48" y="45" fill="#B45309" font-size="14" font-weight="bold" text-anchor="middle">$</text>
+                </svg>
+              } @else {
+                <div [innerHTML]="getCategoryIcon(item.name)" style="display:flex; justify-content:center; align-items:center; width:100%; height:100%;"></div>
+              }
+            }
+          </div>
+          <div class="item-content">
+            <h3>{{ item.name }}</h3>
+            <p>{{ item.description || 'توزيع شنط الغذاء الرمضانية على الأسر المحتاجة' }}</p>
+
+            <div class="item-total">
+              <span class="label">المبلغ الحالي:</span>
+              <span class="amount">{{ getPersonalCategoryTotal(item.id).toLocaleString('ar-EG') }} ج.م</span>
+            </div>
+
+            <button class="btn btn-primary btn-block">
+              إضافة تبرع
+            </button>
+          </div>
+        </div>
+        } @empty {
+          <div class="no-results" style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-secondary);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+            <h3>لا توجد نتائج مطابقة لبحثك</h3>
+            <p>حاول البحث بكلمة أخرى أو تأكد من الكتابة بشكل صحيح</p>
+            <button class="btn btn-outline mt-3" (click)="searchQuery = ''">إظهار كافة البنود</button>
+          </div>
+        }
+      </div>
+      }
+    </div>
+  </section>
+}
+
+<!-- ─── Date Details Modal ────────────────────────────────────────── -->
+@if (isDateModalOpen) {
+  <div class="modal-overlay">
+    <div class="modal-content wide-details-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>حالات يوم: {{ viewDate }}</h3>
+          <p class="subtitle">تم تسجيل {{ viewDateCases.length }} حالة بهذا التاريخ</p>
+        </div>
+        <button class="close-btn" (click)="isDateModalOpen = false">×</button>
+      </div>
+
+      <div class="modal-body list-body">
+        <div class="list-actions">
+          <button class="btn btn-primary btn-sm" (click)="openAdd()">➕ إضافة حالة للهذا اليوم</button>
+        </div>
+
+        <div class="compact-cases-list">
+          @for (c of viewDateCases; track c.id) {
+            <div class="compact-case-item">
+              <div class="item-main">
+                <div class="item-header">
+                  <span class="item-name">{{ c.fullName }}</span>
+                  <span [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+                </div>
+                <div class="item-details" style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; gap: 15px;">
+                    <span>🆔 {{ c.nationalId }}</span>
+                    <span>📞 {{ c.phoneNumber }}</span>
+                    <span>📍 {{ c.region || c.address || 'غير متوفر' }}</span>
+                  </div>
+                  @if (c.images && c.images.length > 0) {
+                    <div style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                      @for (img of c.images; track img) {
+                        <a [href]="'https://localhost:7147' + img" target="_blank" title="عرض الصورة" (click)="$event.stopPropagation()">
+                          <img [src]="'https://localhost:7147' + img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" />
+                        </a>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="item-ops">
+                <button class="btn-circle" (click)="openEdit(c)" title="تعديل">✏️</button>
+                <button class="btn-circle danger" (click)="delete(c.id)" title="حذف">🗑️</button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ─── Case Modal ────────────────────────────────────────────────── -->
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingCase ? 'تعديل حالة' : 'تسجيل حالة استكشاف جديدة' }}</h3>
+        <button class="close-btn" (click)="showModal = false">×</button>
+      </div>
+      
+      <form (ngSubmit)="submit()" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>الاسم الكامل للحالة</label>
+            <input type="text" [(ngModel)]="form.fullName" name="fullName" #fname="ngModel" required placeholder="مثال: محمد أحمد علي">
+            @if (fname.invalid && (fname.dirty || fname.touched)) {
+              <div class="error-msg">⚠️ الاسم مطلوب</div>
+            }
+          </div>
+          <div class="form-group">
+            <label>رقم الهاتف (١١ رقم)</label>
+            <input type="text" [(ngModel)]="form.phoneNumber" name="phoneNumber" #phone="ngModel"
+                   required maxlength="11" minlength="11" pattern="^[0-9]{11}$" placeholder="01xxxxxxxxx">
+            @if (phone.invalid && (phone.dirty || phone.touched)) {
+              <div class="error-msg">⚠️ يجب إدخال ١١ رقم هاتف صحيح</div>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>الرقم القومي (١٤ رقم)</label>
+            <input type="text" [(ngModel)]="form.nationalId" name="nationalId" #nid="ngModel" 
+                   required maxlength="14" minlength="14" pattern="^[0-9]{14}$" placeholder="2990101...">
+            @if (nid.invalid && (nid.dirty || nid.touched)) {
+              <div class="error-msg">⚠️ يجب إدخال ١٤ رقم قومي صحيح</div>
+            }
+          </div>
+          <div class="form-group">
+            <label>المنطقة / العنوان</label>
+            <input type="text" [(ngModel)]="form.region" name="region" required placeholder="مثال: الساحل، الجرية، إلخ">
+          </div>
+
+          <div class="form-group">
+            <label>اسم الزوج</label>
+            <input type="text" [(ngModel)]="form.husbandName" name="husbandName">
+          </div>
+          <div class="form-group">
+            <label>وظيفة الزوج</label>
+            <input type="text" [(ngModel)]="form.husbandJob" name="husbandJob">
+          </div>
+          
+          <div class="form-group">
+            <label>عدد أفراد الأسرة</label>
+            <input type="number" [(ngModel)]="form.familyMembersCount" name="familyMembersCount" min="1">
+          </div>
+          <div class="form-group">
+            <label>مصدر الدخل</label>
+            <input type="text" [(ngModel)]="form.incomeSource" name="incomeSource">
+          </div>
+
+          <div class="form-group full-width">
+            <label>أسماء وأعمار الأبناء</label>
+            <textarea [(ngModel)]="form.childrenDetails" name="childrenDetails" rows="2" placeholder="مثال: أحمد 5، محمود 10"></textarea>
+          </div>
+          
+          <div class="form-group full-width">
+            <label>تفاصيل الحالة</label>
+            <textarea [(ngModel)]="form.caseDetails" name="caseDetails" rows="2" placeholder="اشرح وضع الحالة باختصار..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>استحقاقية الحالة</label>
+            <select [(ngModel)]="form.eligibility" name="eligibility" required>
+              <option value="" disabled>-- اختر درجة الاستحقاق --</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الدعم المطلوب</label>
+            <select [(ngModel)]="form.requiredSupport" name="requiredSupport" required>
+              <option value="" disabled>-- اختر نوع الدعم --</option>
+              <option value="أسقف">أسقف</option>
+              <option value="وصلات مياه">وصلات مياه</option>
+              <option value="شنط رمضان">شنط رمضان</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            @if (editingCase?.images && editingCase!.images!.length > 0) {
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">الصور المرفوعة مسبقاً</label>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  @for (img of editingCase!.images; track img) {
+                    <a [href]="'https://localhost:7147' + img" target="_blank">
+                      <img [src]="'https://localhost:7147' + img" style="height: 80px; width: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);" />
+                    </a>
+                  }
+                </div>
+              </div>
+            }
+            <label>صور إثبات الحالة</label>
+            <input type="file" multiple (change)="onFileSelected($event)" accept="image/*" class="form-control" style="background: var(--bg-dark); padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; width: 100%; color: white;" />
+            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">يمكنك اختيار أكثر من صورة (اختر تباعاً أو حدد عدة صور)</small>
+            
+            @if (selectedFiles.length > 0) {
+              <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                @for (f of selectedFiles; track f.name) {
+                  <div style="background: var(--bg-card); padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 5px; font-size: 0.8rem; border: 1px solid var(--border);">
+                    <span>{{ f.name }}</span>
+                    <button type="button" (click)="removeSelectedFile(f)" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="showModal = false">إلغاء</button>
+          <button type="submit" class="btn btn-primary" 
+                   [disabled]="submitting || nid.invalid || phone.invalid || fname.invalid || !form.requiredSupport || !form.eligibility">
+            {{ submitting ? 'جاري الحفظ...' : (editingCase ? 'تحديث البيانات' : 'تأكيد التسجيل') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ─── Donation Modal ────────────────────────────────────────────── -->
+@if (donationModal) {
+  <div class="modal-overlay">
+    <div class="modal-content wide-modal" (click)="$event.stopPropagation()">
+      <div class="modal-split">
+        
+        <!-- Right Side: Donation Form -->
+        <div class="modal-form-side">
+          <div class="modal-header">
+            <h3>تبرع لـ: {{ selectedCategory?.name }}</h3>
+            <button class="close-btn" (click)="donationModal = false">×</button>
+          </div>
+          
+          <form (ngSubmit)="donationFormObj.form.valid && submitDonation(donationFormObj)" class="modal-body" #donationFormObj="ngForm">
+            <div class="form-group">
+              <label>مبلغ التبرع</label>
+              <div class="amount-input">
+                <input type="number" [(ngModel)]="donationForm.amount" name="amount" #dAmount="ngModel" required min="1" placeholder="أدخل المبلغ">
+                <span class="currency">ج.م</span>
+              </div>
+              @if (donationFormObj.submitted && dAmount.invalid) {
+                <div class="error-msg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px;">⚠️ يرجى إدخال مبلغ التبرع</div>
+              }
+            </div>
+
+            <!-- البند الفعلي (فقط عند التبرع لـ ماليات لم تصل) -->
+            @if (selectedCategory?.name === 'ماليات لم تصل') {
+              <div class="form-group" style="margin-top: 1rem; animation: slideDown 0.3s ease;">
+                <label style="color: var(--accent); font-weight: 700; font-size: 1rem; display: block; margin-bottom: 0.6rem; opacity: 0.9;">البند الفعلي (المراد التبرع له عند التفعيل)</label>
+                <div class="select-wrapper" style="position: relative;">
+                  <select [(ngModel)]="donationForm.targetCategoryId" name="targetCategoryId" #dTargetCat="ngModel" required
+                          style="width: 100%; padding: 0.9rem 1rem; border-radius: 12px; background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: #fff; font-size: 1rem; cursor: pointer; outline: none; appearance: none; transition: all 0.2s;">
+                    <option value="" disabled selected style="background: #1a1a1a; color: #888;">-- اختر البند الفعلي --</option>
+                    @for (cat of donationItems; track cat.id) {
+                      @if (cat.name !== 'ماليات لم تصل') {
+                        <option [value]="cat.id" style="background: #1a1a1a; color: #fff;">{{ cat.name }}</option>
+                      }
+                    }
+                  </select>
+                  <span class="select-arrow" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--accent); font-size: 0.8rem;">▼</span>
+                </div>
+                @if (donationFormObj.submitted && dTargetCat.invalid) {
+                  <div class="error-msg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px;">⚠️ يرجى اختيار البند الفعلي للتبرع</div>
+                }
+              </div>
+            }
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label>ملاحظات (اختياري)</label>
+              <textarea [(ngModel)]="donationForm.notes" name="notes" rows="2" placeholder="أضف أي ملاحظات هنا..." style="width: 100%; padding: 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main); font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem; animation: slideDown 0.3s ease;">
+              <label style="color: var(--accent); font-weight: 700; font-size: 1rem; display: block; margin-bottom: 0.6rem; opacity: 0.9;">إلى (المسؤول المالي)</label>
+              <div class="select-wrapper" style="position: relative;">
+                <select [(ngModel)]="donationForm.assignedUserId" name="assignedUserId" #dAdmin="ngModel" required
+                        style="width: 100%; padding: 0.9rem 1rem; border-radius: 12px; background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: #fff; font-size: 1rem; cursor: pointer; outline: none; appearance: none; transition: all 0.2s;">
+                  <option value="" disabled selected style="background: #1a1a1a; color: #888;">-- اختر المسؤول المالي --</option>
+                  @for (admin of financialAdmins; track admin.id) {
+                    <option [value]="admin.id" style="background: #1a1a1a; color: #fff;">
+                      {{ admin.fullName }} {{ admin.id === authService.currentUser()?.userId ? '(أنا)' : '' }}
+                    </option>
+                  }
+                </select>
+                <span class="select-arrow" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--accent); font-size: 0.8rem;">▼</span>
+              </div>
+              
+              @if (donationFormObj.submitted && dAdmin.invalid) {
+                <div class="error-msg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px;">⚠️ يرجى اختيار المسؤول المالي لتتمكن من تأكيد التبرع</div>
+              }
+
+              <p class="field-hint" style="font-size: 0.8rem; color: #aaa; margin-top: 8px; font-style: italic;" *ngIf="donationForm.assignedUserId === authService.currentUser()?.userId">
+                💡 سيتم إضافة هذا المبلغ إلى <strong>سيولتك الشخصية</strong>
+              </p>
+              <p class="field-hint" style="font-size: 0.8rem; color: #aaa; margin-top: 8px; font-style: italic;" *ngIf="donationForm.assignedUserId && donationForm.assignedUserId !== authService.currentUser()?.userId">
+                💡 سيتم إضافة هذا المبلغ إلى <strong>السيولة العامة</strong> لعهدة المسؤول المختار
+              </p>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" (click)="donationModal = false">إلغاء</button>
+              <button type="submit" class="btn btn-accent" [disabled]="submitting">
+                {{ submitting ? 'جاري الحفظ...' : 'تأكيد التبرع' }}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Left Side: History Sheet -->
+        <div class="modal-history-side">
+          <div class="sheet-container">
+            <div class="sheet-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <div>
+                <div class="sheet-title">حافظة تبرعاتي</div>
+                <div class="sheet-subtitle">آخر العمليات التي قمت بها</div>
+              </div>
+              <button class="btn-pdf" type="button" (click)="downloadCategoryMyOperationsPDF()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'">
+                <span style="font-size: 1rem;">📕</span> PDF
+              </button>
+            </div>
+            
+            <div class="sheet-content">
+              @for (d of getFilteredDonations(); track d.id) {
+                <div class="sheet-item">
+                  <div class="item-info">
+                    <span class="item-cat">{{ d.category?.name }}</span>
+                    <span class="item-date">{{ formatDate(d.createdAt) }}</span>
+                    @if (d.notes) {
+                      <span class="item-notes" style="font-size: 0.75rem; color: #666; margin-top: 4px; display: block; font-style: italic;">
+                        📝 {{ d.notes }}
+                      </span>
+                    }
+                  </div>
+                  <div class="item-amount">+ {{ d.amount | number }}</div>
+                </div>
+              } @empty {
+                <div class="sheet-empty">
+                  <p>لا توجد تبرعات سابقة مسجلة لك</p>
+                </div>
+              }
+            </div>
+            
+            <div class="sheet-footer">
+              <div class="footer-dots"></div>
+              <span>مستبشرا الخيرية</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}
+
+
+<!-- ─── Footer ────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="logo" routerLink="/home" style="cursor: pointer;">
+      <span class="logo-icon">☪</span>
+      <span class="logo-text">مستبشرا</span>
+    </div>
+    <p>جمعية مستبشرا الخيرية — نعمل من أجل وجه الله</p>
+  </div>
+</footer>

@@ -1,0 +1,713 @@
+@if (loading) { <div class="spinner"></div> }
+
+@if (stats) {
+<!-- Stats Cards — كل كارد clickable -->
+<div class="stats-grid">
+
+  @if (!auth.isRestrictedAdmin()) {
+  <div class="stat-card clickable" (click)="navigateTo('members')">
+    <div class="stat-icon">👥</div>
+    <div class="stat-info">
+      <span class="stat-label">الأعضاء</span>
+      <span class="stat-value">{{ stats.membersCount || 0 }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card clickable" (click)="navigateTo('volunteers')">
+    <div class="stat-icon">🙋‍♂️</div>
+    <div class="stat-info">
+      <span class="stat-label">المتطوعين</span>
+      <span class="stat-value">{{ stats.volunteersCount || 0 }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card clickable" (click)="navigateTo('guides')">
+    <div class="stat-icon">📖</div>
+    <div class="stat-info">
+      <span class="stat-label">الدلائل</span>
+      <span class="stat-value">{{ stats.guidesCount || 0 }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card clickable" (click)="navigateTo('transportations')">
+    <div class="stat-icon">🛠️</div>
+    <div class="stat-info">
+      <span class="stat-label">تجهيزات</span>
+      <span class="stat-value">{{ stats.transportationsCount || 0 }}</span>
+    </div>
+  </div>
+  }
+
+  <div class="stat-card clickable" (click)="navigateTo('categories')">
+    <div class="stat-icon">💰</div>
+    <div class="stat-info">
+      <span class="stat-label">بنود التبرع</span>
+      <span class="stat-value">{{ stats.categoryTotals.length || 0 }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card clickable" (click)="navigateTo('weekly-history')">
+    <div class="stat-icon">📅</div>
+    <div class="stat-info">
+      <span class="stat-label">السجل الأسبوعي</span>
+      <span class="stat-value">{{ stats.operationsCount || 0 }}</span>
+    </div>
+  </div>
+
+  @if (auth.isAdmin()) {
+  <div class="stat-card clickable" (click)="navigateTo('users')">
+    <div class="stat-icon">👤</div>
+    <div class="stat-info">
+      <span class="stat-label">المستخدمين</span>
+      <span class="stat-value">{{ stats.usersCount || 0 }}</span>
+    </div>
+  </div>
+  }
+
+
+  @if (!auth.isRestrictedAdmin()) {
+  <div class="stat-card clickable" (click)="openModal('partners', '🤝 الجمعيات الشريكة')">
+    <div class="stat-icon">🤝</div>
+    <div class="stat-info">
+      <span class="stat-label">الجمعيات الشريكة</span>
+      <span class="stat-value">{{ stats.partnersCount | number }}</span>
+    </div>
+  </div>
+  }
+
+  <!-- Deductions Card + Liquidity Allocations — للمسؤولين المقيّدين فقط -->
+  @if (auth.isRestrictedAdmin()) {
+  <div class="stat-card clickable" (click)="openDeductionModal()">
+    <div class="stat-icon">💸</div>
+    <div class="stat-info">
+      <span class="stat-label">الخصومات</span>
+      <span class="stat-value danger" style="color: #ef4444; font-size: 1.2rem;">إضافة خصم</span>
+    </div>
+  </div>
+
+  <!-- كارت السيولة العامة (المبالغ التي وزعتها على الآخرين) -->
+  @if (stats.personalLiquidityAllocations && stats.personalLiquidityAllocations.length > 0) {
+  <div class="stat-card clickable" (click)="showLiquidityModal = true"
+    style="background: rgba(245,158,11,0.07); border-color: rgba(245,158,11,0.4);">
+    <div class="stat-icon">🤝</div>
+    <div class="stat-info">
+      <span class="stat-label" style="font-weight: 700;">السيولة العامة</span>
+      <span class="stat-value" style="color: #f59e0b; font-weight: 900;">
+        {{ formatCurrency(stats.personalLiquidityAllocations.reduce((acc, x) => acc + x.totalAmount, 0)) }}
+      </span>
+    </div>
+  </div>
+  }
+
+  <!-- كارت السيولة الشخصية (إجمالي ما تملكه في جيبك) -->
+  <div class="stat-card clickable" (click)="openPersonalLiquidityModal()"
+    style="background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.4);">
+    <div class="stat-icon">💰</div>
+    <div class="stat-info">
+      <span class="stat-label" style="font-weight: 700;">إجمالي عهدتي</span>
+      <span class="stat-value" style="color: #10b981; font-weight: 900;">
+        {{ formatCurrency(stats.personalLiquidity) }}
+      </span>
+    </div>
+  </div>
+
+  <!-- كارت التحويلات المالية -->
+  <div class="stat-card clickable" (click)="openTransferModal()"
+    style="background: rgba(99,102,241,0.07); border-color: rgba(99,102,241,0.4);">
+    <div class="stat-icon">🔁</div>
+    <div class="stat-info">
+      <span class="stat-label" style="font-weight: 700;">التحويلات المالية</span>
+      <span class="stat-value" style="color: #818cf8; font-size: 1rem;">
+        {{ myTransfers.length > 0 ? myTransfers.length + ' تحويل' : 'تحويل جديد' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- كارت ماليات معلقة لم تصل (خاص بالمسؤول المالي فقط) -->
+  <div class="stat-card clickable" (click)="openModal('pending-finances', '⏳ ماليات معلقة لم تصل')"
+    style="background: rgba(20,184,166,0.07); border-color: rgba(20,184,166,0.4);">
+    <div class="stat-icon" style="color: #14b8a6;">⏳</div>
+    <div class="stat-info">
+      <span class="stat-label" style="font-weight: 700;">ماليات معلقة</span>
+      <span class="stat-value" style="color: #14b8a6; font-weight: 900;">
+        {{ pendingFinances.length || 0 }} معاملات
+      </span>
+    </div>
+  </div>
+
+  }
+
+  @if (!auth.isRestrictedAdmin()) {
+  <div class="stat-card clickable" (click)="openModal('cases-pending', '⏳ الحالات المعلقة')">
+    <div class="stat-icon">⏳</div>
+    <div class="stat-info">
+      <span class="stat-label">حالات معلقة</span>
+      <span class="stat-value pending">{{ stats.pendingCases | number }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card clickable" (click)="openModal('cases-approved', '✅ الحالات المعتمدة')">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info">
+      <span class="stat-label">حالات معتمدة</span>
+      <span class="stat-value approved">{{ stats.approvedCases | number }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card clickable" (click)="openModal('cases-rejected', '❌ الحالات المرفوضة')">
+    <div class="stat-icon">❌</div>
+    <div class="stat-info">
+      <span class="stat-label">حالات مرفوضة</span>
+      <span class="stat-value rejected" style="color: #ef4444;">{{ stats.rejectedCases | number }}</span>
+    </div>
+  </div>
+  }
+</div>
+
+
+
+
+<!-- ─── السيولة العامة Modal ────────────────────────────────────── -->
+@if (showLiquidityModal && stats) {
+<div class="modal-overlay">
+  <div class="modal-box" (click)="$event.stopPropagation()" style="max-width: 700px; padding: 2rem;">
+    <div class="modal-header"
+      style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="font-size: 1.4rem; font-weight: 900; color: #f59e0b;">💰 السيولة العامة (موزعة بواسطتك)</h2>
+      <button (click)="showLiquidityModal = false"
+        style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; line-height: 1;">×</button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+      @for (alloc of stats.personalLiquidityAllocations; track alloc.userId) {
+      <div class="liquidity-user-card"
+        style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.35); border-radius: 16px; padding: 1.25rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;">
+
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+          <div
+            style="font-size: 2.2rem; background: rgba(245,158,11,0.15); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+            👤</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 800; color: var(--text-primary); font-size: 1.1rem; margin-bottom: 2px;">{{
+              alloc.fullName }}</div>
+            <div style="color: #f59e0b; font-weight: 900; font-size: 1.3rem;">{{ formatCurrency(alloc.totalAmount) }}
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+    <div style="margin-top: 1.5rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+      إجمالي: <strong style="color: #f59e0b;">{{ formatCurrency(stats.personalLiquidityAllocations!.reduce((acc, x) =>
+        acc + x.totalAmount, 0)) }}</strong>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ─ التحويلات المالية Modal ─ -->
+@if (showTransferModal) {
+<div class="modal-overlay">
+  <div class="modal-box" (click)="$event.stopPropagation()" style="max-width: 750px; padding: 0; overflow: hidden;">
+    <div
+      style="background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.1)); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+      <h2 style="font-size: 1.3rem; font-weight: 900; color: #818cf8; margin: 0;">{{ editingTransferId ? '✏️ تعديل تحويل مالي سابق' : '🔁 تحويل مالي جديد' }}</h2>
+      <button (click)="closeTransferModal()"
+        style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">×</button>
+    </div>
+
+    <div style="padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <!-- من -->
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">مِن (المُرسل)</label>
+        <select [(ngModel)]="transferForm.fromUserId" (change)="onFromUserChange()"
+          style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+          <option value="" disabled style="background: #1a1a1a;">-- اختر المسؤول المُرسل --</option>
+          @for (admin of financialAdmins; track admin.id) {
+          <option [value]="admin.id" style="background: #1a1a1a;">{{ admin.fullName }} (سيولته: {{ getAdminLiquidity(admin.id) }})</option>
+          }
+        </select>
+      </div>
+
+      <!-- إلى -->
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">إلى (المستلم)</label>
+        <select [(ngModel)]="transferForm.toUserId"
+          style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); font-size: 0.95rem; outline: none;">
+          <option value="" disabled style="background: #1a1a1a;">-- اختر المسؤول المستلم --</option>
+          @for (admin of financialAdmins; track admin.id) {
+          <option [value]="admin.id" [disabled]="admin.id === transferForm.fromUserId" style="background: #1a1a1a;">{{ admin.fullName }} (سيولته: {{ getAdminLiquidity(admin.id) }})</option>
+          }
+        </select>
+      </div>
+
+      <!-- السيولة المتاحة -->
+      <div style="grid-column: span 2; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+        @if (transferForm.fromUserId) {
+          <div style="font-weight: 700; color: #818cf8; font-size: 1.05rem; padding: 0.75rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px;">
+            السيولة الشخصية المتوفرة لدى المُرسل: {{ formatCurrency(getMaxAllowedTransferAmount()) }}
+          </div>
+        }
+      </div>
+
+      <!-- المبلغ -->
+      <div style="grid-column: span 2;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">المبلغ (ج.م)</label>
+        <input type="number" [(ngModel)]="transferForm.amount" min="1" placeholder="0"
+          style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); font-size: 1rem; outline: none; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <!-- سجل التحويلات -->
+    @if (myTransfers.length > 0) {
+    <div style="padding: 0 2rem; margin-bottom: 1rem;">
+      <h4 style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.75rem; font-weight: 600;">📋 تحويلاتي السابقة</h4>
+      <div style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+        @for (t of myTransfers; track t.id) {
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <div style="font-size: 0.85rem;">
+            <span style="color: #ef4444;">{{ t.fromUserName }}</span>
+            <span style="color: var(--text-secondary); margin: 0 0.4rem;">←</span>
+            <span style="color: #10b981;">{{ t.toUserName }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="color: #818cf8; font-weight: 700; margin-left: 0.5rem;">{{ formatCurrency(t.amount) }}</span>
+            <button (click)="editTransfer(t)" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #818cf8; border-radius: 6px; padding: 0.2rem 0.5rem; cursor: pointer; font-size: 0.8rem;">تعديل</button>
+            <button (click)="deleteTransfer(t.id)" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; border-radius: 6px; padding: 0.2rem 0.5rem; cursor: pointer; font-size: 0.8rem;">حذف</button>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Buttons -->
+    <div style="padding: 1rem 2rem 1.5rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border);">
+      <button (click)="closeTransferModal()" style="padding: 0.7rem 1.5rem; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 0.95rem;">إلغاء</button>
+      <button (click)="submitTransfer()"
+        [disabled]="transferring || !transferForm.fromUserId || !transferForm.toUserId || transferForm.amount <= 0 || transferForm.amount > getMaxAllowedTransferAmount() || transferForm.fromUserId === transferForm.toUserId"
+        style="padding: 0.7rem 1.75rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-weight: 700; cursor: pointer; font-size: 0.95rem; opacity: 1;"
+        [style.opacity]="(transferring || !transferForm.fromUserId || !transferForm.toUserId || transferForm.amount <= 0 || transferForm.amount > getMaxAllowedTransferAmount() || transferForm.fromUserId === transferForm.toUserId) ? '0.5' : '1'">
+        {{ transferring ? 'جاري الحفظ...' : (editingTransferId ? '💾 حفظ التعديل' : '🔁 تأكيد التحويل') }}
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ─── Unified Modal ─────────────────────────────────────────────── -->
+@if (modalType) {
+<div class="modal-overlay">
+  <div class="modal-box detail-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="header-left">
+        <h2>{{ modalTitle }} @if(!loadingModal){ <span class="count-badge">({{ filteredModalData.length }})</span> }
+        </h2>
+      </div>
+
+      <div class="modal-actions">
+        @if (modalType === 'donations' || modalType === 'category-details') {
+        <!-- Category Filter (Only for overall donations) -->
+        @if (modalType === 'donations') {
+        <div class="filter-dropdown">
+          <button class="btn-filter" (click)="showFilterDropdown = !showFilterDropdown">
+            🔍 فلتر التخصصات @if(selectedCategories.length > 0){ <span
+              class="filter-count">{{selectedCategories.length}}</span> }
+          </button>
+          @if (showFilterDropdown) {
+          <div class="dropdown-menu">
+            @for (cat of availableCategories; track cat) {
+            <label class="checkbox-item">
+              <input type="checkbox" [checked]="selectedCategories.includes(cat)" (change)="toggleCategory(cat)">
+              {{ cat }}
+            </label>
+            }
+          </div>
+          }
+        </div>
+        }
+
+        <!-- Export Buttons -->
+        <div class="export-group">
+          @if (modalType === 'category-details') {
+          <button class="btn-export info" (click)="showDeductionsOnly = !showDeductionsOnly"
+            [class.active]="showDeductionsOnly" title="سجل الخصومات">
+            {{ showDeductionsOnly ? '🔙 الرجوع للتبرعات' : '📉 سجل الخصومات' }}
+          </button>
+          }
+          <button class="btn-export excel" (click)="exportExcel()" title="تصدير Excel">📗 Excel</button>
+          <button class="btn-export pdf" (click)="exportPDF()" title="تصدير PDF">📕 PDF</button>
+        </div>
+        }
+        <button class="close-btn" (click)="closeModal()">✕</button>
+      </div>
+    </div>
+
+    @if (loadingModal) {
+    <div class="spinner"></div>
+    } @else if (errorModal) {
+    <div class="error-msg">❌ {{ errorModal }}</div>
+    } @else if (modalData.length === 0 && modalType !== 'deductions-form') {
+    <div class="empty-msg">📭 لا توجد بيانات</div>
+    } @else {
+
+    <!-- ─ Donations Table (Grouped Only) ─ -->
+    @if (modalType === 'donations') {
+    <div class="modal-table-wrapper">
+      <table class="data-table" id="donationsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="amount-cell text-right">المجال / البند</th>
+            <th class="amount-cell center">عدد التبرعات</th>
+            <th class="amount-cell">إجمالي المبلغ</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (g of groupedDonations; track g.categoryName; let i = $index) {
+          <tr>
+            <td class="row-num" data-label="#">{{ i + 1 }}</td>
+            <td data-label="المجال / البند"><strong>{{ g.categoryName }}</strong></td>
+            <td class="center" data-label="عدد التبرعات">{{ g.count }}</td>
+            <td class="amount-cell" data-label="إجمالي المبلغ">{{ formatCurrency(g.amount) }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer-total">
+      الإجمالي الكلي: <strong>{{ formatCurrency(groupedDonations.reduce(sumTotal, 0)) }}</strong>
+    </div>
+    }
+
+    <!-- ─ Category Detailed Table ─ -->
+    @if (modalType === 'category-details') {
+    <div class="modal-table-wrapper">
+      <table class="data-table" id="detailsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>المتبرع</th>
+            <th>المبلغ</th>
+            <th>التاريخ والوقت</th>
+            <th class="center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of filteredModalData; track d.id; let i = $index) {
+          <tr>
+            <td class="row-num" data-label="#">{{ i + 1 }}</td>
+            <td data-label="المتبرع"><strong>{{ d.donorName }}</strong></td>
+
+            @if (editingRowId === d.id) {
+            <td class="amount-cell" data-label="المبلغ">
+              <input type="number" [(ngModel)]="inlineEditAmount" class="form-control inline-input"
+                style="width: 100px; padding: 0.25rem 0.5rem; border-radius: 4px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-primary); text-align: center;">
+            </td>
+            <td class="date-cell" data-label="التاريخ والوقت">{{ formatDate(d.createdAt) }}</td>
+            <td class="center actions-cell" data-label="إجراءات">
+              <button class="btn-icon" (click)="saveEdit(d.id)" title="حفظ التعديل"
+                style="color: #10b981; margin-left: 5px;">✔️</button>
+              <button class="btn-icon" (click)="editingRowId = null" title="إلغاء التعديل"
+                style="color: #ef4444;">❌</button>
+            </td>
+            } @else {
+            <td class="amount-cell" data-label="المبلغ">{{ formatCurrency(d.amount) }}</td>
+            <td class="date-cell" data-label="التاريخ والوقت">{{ formatDate(d.createdAt) }}</td>
+            <td class="center actions-cell" data-label="إجراءات">
+              <button class="btn-icon" (click)="startEdit(d.id, d.amount)" title="تعديل"
+                style="margin-left: 5px;">✏️</button>
+              <button class="btn-icon btn-danger" (click)="deleteDonationEntry(d.id)" title="حذف">🗑️</button>
+            </td>
+            }
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer-total">
+      {{ showDeductionsOnly ? 'إجمالي الخصومات:' : 'إجمالي التبرعات:' }} <strong>{{
+        formatCurrency(filteredModalData.reduce(sumTotal, 0)) }}</strong>
+    </div>
+    }
+
+    <!-- ─ Personal Category Detailed Table ─ -->
+    @if (modalType === 'personal-category-details' || modalType === 'personal-liquidity-details') {
+
+
+
+    <div class="modal-table-wrapper">
+      <table class="data-table" id="personalDetailsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>المبلغ</th>
+            <th>التاريخ والوقت</th>
+            <th>الملاحظات</th>
+            <th class="center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of modalData; track d.id; let i = $index) {
+          <tr>
+            <td class="row-num" data-label="#">{{ i + 1 }}</td>
+
+            @if (editingRowId === d.id) {
+            <td class="amount-cell" data-label="المبلغ">
+              <input type="number" [(ngModel)]="inlineEditAmount" class="form-control inline-input"
+                style="width: 100px; padding: 0.25rem 0.5rem; border-radius: 4px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-primary); text-align: center;">
+            </td>
+            <td class="date-cell" data-label="التاريخ والوقت">{{ formatDate(d.createdAt) }}</td>
+            <td class="notes-cell" data-label="الملاحظات">{{ d.notes || '—' }}</td>
+            <td class="center actions-cell" data-label="إجراءات">
+              <button class="btn-icon" (click)="saveEdit(d.id)" title="حفظ التعديل"
+                style="color: #10b981; margin-left: 5px;">✔️</button>
+              <button class="btn-icon" (click)="editingRowId = null" title="إلغاء التعديل"
+                style="color: #ef4444;">❌</button>
+            </td>
+            } @else {
+            <td class="amount-cell" style="color: #10b981; font-weight: 800;" data-label="المبلغ">{{
+              formatCurrency(d.amount) }}</td>
+            <td class="date-cell" data-label="التاريخ والوقت">{{ formatDate(d.createdAt) }}</td>
+            <td class="notes-cell" data-label="الملاحظات">{{ d.notes || '—' }}</td>
+            <td class="center actions-cell" data-label="إجراءات">
+              <button class="btn-icon" (click)="startEdit(d.id, d.amount)" title="تعديل"
+                style="margin-left: 5px;">✏️</button>
+              <button class="btn-icon btn-danger" (click)="deleteDonationEntry(d.id)" title="حذف">🗑️</button>
+            </td>
+            }
+          </tr>
+          } @empty {
+          <tr>
+            <td [attr.colspan]="5" class="empty-cell text-center"
+              style="padding: 2rem;">لا توجد بيانات مسجلة في هذا القسم.</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer-total"
+      style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">
+      الإجمالي: <strong>{{ formatCurrency(modalData.reduce(sumTotal, 0)) }}</strong>
+    </div>
+    }
+
+    <!-- ─ Partners Table ─ -->
+    @if (modalType === 'partners') {
+    <div class="modal-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الجمعية</th>
+            <th>المسؤول</th>
+            <th>الهاتف</th>
+            <th>العنوان</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of modalData; track p.id; let i = $index) {
+          <tr>
+            <td class="row-num" data-label="#">{{ i + 1 }}</td>
+            <td data-label="اسم الجمعية"><strong>{{ p.name }}</strong></td>
+            <td data-label="المسؤول">{{ p.contactPerson || '—' }}</td>
+            <td data-label="الهاتف">{{ p.phoneNumber || '—' }}</td>
+            <td data-label="العنوان">{{ p.address || '—' }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+
+    <!-- ─ Cases Cards ─ -->
+    @if (modalType === 'cases-all' || modalType === 'cases-pending' || modalType === 'cases-approved' || modalType === 'cases-rejected') {
+    <div class="modal-table-wrapper" style="padding: 4px 0;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        @for (c of modalData; track c.id; let i = $index) {
+        <div style="background: var(--bg-card2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; transition: border-color 0.2s;" 
+             onmouseover="this.style.borderColor='var(--primary)'" 
+             onmouseout="this.style.borderColor='var(--border)'">
+
+          <!-- رقم + اسم -->
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1 1 180px; min-width: 0;">
+            <span style="background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex-shrink: 0;">{{ i + 1 }}</span>
+            <div style="min-width: 0;">
+              <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.fullName }}</div>
+              <div style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">{{ c.nationalId }}</div>
+            </div>
+          </div>
+
+          <!-- بيانات المنطقة والدعم -->
+          <div style="flex: 1 1 140px; min-width: 0;">
+            @if (c.region || c.address) {
+              <div style="font-size: 0.82rem; color: var(--text-secondary);">📍 {{ c.region || c.address }}</div>
+            }
+            @if (c.requiredSupport) {
+              <div style="font-size: 0.82rem; color: var(--accent); margin-top: 3px; font-weight: 600;">🏠 {{ c.requiredSupport }}</div>
+            }
+            @if (c.phoneNumber) {
+              <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 3px;">📞 {{ c.phoneNumber }}</div>
+            }
+          </div>
+
+          <!-- الحالة - فقط لو all cases -->
+          @if (modalType === 'cases-all') {
+          <div style="flex-shrink: 0; align-self: center;">
+            <span class="badge" [ngClass]="{
+              'badge-warning': c.status === 'Pending' || c.status == 0,
+              'badge-primary': c.status === 'UnderInvestigation' || c.status == 1,
+              'badge-success': c.status === 'Approved' || c.status == 2,
+              'badge-danger':  c.status === 'Rejected' || c.status == 3
+            }">{{ caseStatusLabel(c.status) }}</span>
+          </div>
+          }
+
+        </div>
+        }
+        @empty {
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">لا توجد حالات</div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- ─ Pending Finances (ماليات لم تصل) List ─ -->
+    @if (modalType === 'pending-finances') {
+    <div class="modal-table-wrapper">
+      <table class="data-table" id="pendingFinancesTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>القيمة</th>
+            <th>البند المراد (الهدف)</th>
+            <th>المسؤول المالي (المستهدف)</th>
+            <th>التاريخ والوقت</th>
+            <th>ملاحظات</th>
+            <th class="center">إجراءات تفعيل المعاملة</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of modalData; track d.id; let i = $index) {
+          <tr>
+            <td class="row-num" data-label="#">{{ i + 1 }}</td>
+            
+            @if (editingRowId === d.id) {
+            <td class="amount-cell" data-label="القيمة">
+              <input type="number" [(ngModel)]="inlineEditAmount" class="form-control inline-input"
+                style="width: 100px; padding: 0.25rem 0.5rem; border-radius: 8px; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-primary); text-align: center; font-weight: bold; outline: none;">
+            </td>
+            } @else {
+            <td class="amount-cell" style="color: #14b8a6; font-weight: 800;" data-label="القيمة">{{ formatCurrency(d.amount) }}</td>
+            }
+
+            <td data-label="البند المراد (الهدف)">
+              <span class="badge badge-primary" style="background: rgba(99,102,241,0.15); color: #818cf8; font-weight: 700; border: 1px solid rgba(99,102,241,0.3);">
+                {{ d.targetCategoryName || 'غير محدد' }}
+              </span>
+            </td>
+            <td data-label="المسؤول المالي"><strong>{{ d.assignedTo || 'السيولة العامة' }}</strong></td>
+            <td class="date-cell" data-label="التاريخ والوقت">{{ formatDate(d.createdAt) }}</td>
+            <td class="notes-cell" data-label="ملاحظات" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="d.notes || ''">
+              {{ d.notes || '—' }}
+            </td>
+            
+            @if (editingRowId === d.id) {
+            <td class="center actions-cell" data-label="تفعيل المعاملة">
+              <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                <button class="btn-icon" (click)="saveEdit(d.id)" title="حفظ التعديل" style="color: #10b981; font-size: 1.2rem; cursor: pointer; background: transparent; border: none;">✔️</button>
+                <button class="btn-icon" (click)="editingRowId = null" title="إلغاء التعديل" style="color: #ef4444; font-size: 1.2rem; cursor: pointer; background: transparent; border: none;">❌</button>
+              </div>
+            </td>
+            } @else {
+            <td class="center actions-cell" data-label="تفعيل المعاملة">
+              <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+                <button class="btn btn-accent btn-sm" (click)="activatePending(d.id)" 
+                        style="background: linear-gradient(135deg, #14b8a6, #0d9488); border: none; color: #fff; font-weight: 700; border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 5px;">
+                  <span>⚡</span> تفعيل
+                </button>
+                <button class="btn-icon" (click)="startEdit(d.id, d.amount)" title="تعديل القيمة" style="font-size: 1.1rem; cursor: pointer; background: transparent; border: none;">✏️</button>
+                <button class="btn-icon btn-danger" (click)="deleteDonationEntry(d.id)" title="حذف" style="font-size: 1.1rem; cursor: pointer; background: transparent; border: none;">🗑️</button>
+              </div>
+            </td>
+            }
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="8" class="empty-cell text-center" style="padding: 3rem; color: var(--text-muted);">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+              <h3>لا توجد أي معاملات مالية معلقة حالياً</h3>
+              <p>تم تفعيل جميع المدخلات السابقة بنجاح.</p>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer-total"
+      style="background: rgba(20, 184, 166, 0.1); border-color: rgba(20, 184, 166, 0.3); color: #14b8a6;">
+      إجمالي المبالغ المعلقة: <strong>{{ formatCurrency(modalData.reduce(sumTotal, 0)) }}</strong>
+    </div>
+    }
+
+    @if (modalType === 'deductions-form') {
+    <form (ngSubmit)="deductionFormObj.form.valid && submitDeduction()" class="deduction-form-container" style="padding: 1rem 0;" #deductionFormObj="ngForm">
+      <!-- مِن أولاً -->
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">مِن</label>
+        <select [(ngModel)]="deductionForm.targetUserId" name="targetUserId" #dTargetUser="ngModel" required (change)="onTargetUserChange()" class="form-control"
+          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); font-size: 1rem;">
+          <option value="" disabled>-- اختر المسؤول --</option>
+          @for (admin of financialAdmins; track admin.id) {
+          <option [value]="admin.id">{{ admin.fullName }} (السيولة: {{ getAdminLiquidity(admin.id) }})</option>
+          }
+        </select>
+        @if (deductionFormObj.submitted && dTargetUser.invalid) {
+          <div class="error-msg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px;">⚠️ يرجى تحديد الشخص</div>
+        }
+      </div>
+
+      <!-- البند -->
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">البند</label>
+        <select [(ngModel)]="deductionForm.categoryId" name="categoryId" class="form-control"
+          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); font-size: 1rem;">
+          @for (cat of stats?.categoryTotals; track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">المبلغ المراد خصمه</label>
+        <input type="number" [(ngModel)]="deductionForm.amount" name="amount" #dAmount="ngModel" required min="1" class="form-control"
+          placeholder="أدخل المبلغ (مثال: 500)"
+          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); font-size: 1rem;">
+        @if (deductionFormObj.submitted && dAmount.invalid) {
+          <div class="error-msg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px;">⚠️ يرجى إدخال مبلغ صحيح</div>
+        }
+        @if (deductionForm.amount && deductionForm.amount > getTargetUserLiquidity()) {
+          <div class="info-msg" style="color: #60a5fa; font-size: 0.85rem; margin-top: 5px; font-weight: bold; background: rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+            ℹ️ تنبيه: المبلغ المطلوب أكبر من السيولة المتوفرة لدى هذا الشخص. سيتم احتساب الرصيد بالسالب بعد الخصم.
+          </div>
+        }
+      </div>
+      <div class="form-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-outline" (click)="closeModal()"
+          style="padding: 0.75rem 1.5rem; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text-primary); cursor: pointer;">إلغاء</button>
+        <button type="submit" class="btn btn-primary"
+          [disabled]="submittingDeduction"
+          style="padding: 0.75rem 1.5rem; border-radius: 8px; background: #ef4444; color: white; border: none; cursor: pointer; font-weight: bold; transition: opacity 0.2s;">
+          {{ submittingDeduction ? 'جاري الخصم...' : 'تأكيد الخصم' }}
+        </button>
+      </div>
+    </form>
+    }
+
+    }
+  </div>
+</div>
+}
+}

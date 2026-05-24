@@ -1,0 +1,103 @@
+<div class="donate-page">
+
+  <!-- Back -->
+  <div class="container">
+    <a routerLink="/" class="back-link">← الرجوع للرئيسية</a>
+  </div>
+
+  @if (loading) {
+    <div class="spinner"></div>
+  } @else if (category) {
+    <div class="container donate-layout">
+
+      <!-- ─── Left: Donation Form ───────────────────── -->
+      <div class="form-panel">
+        <div class="panel-header">
+          <div class="panel-icon">{{ category.name === 'بناء أسقف' ? '🏠' : category.name === 'وصلات مياه' ? '💧' : category.name === 'إعمار مساجد' ? '🕌' : category.name === 'شنط رمضان' ? '🌙' : '💰' }}</div>
+          <h1>{{ category.name }}</h1>
+          <p>{{ category.description }}</p>
+        </div>
+
+        <!-- Total donated so far -->
+        <div class="total-box">
+          <span class="total-label">إجمالي ما تم جمعه</span>
+          <span class="total-value">{{ formatCurrency(category.totalAmount) }}</span>
+        </div>
+
+        <!-- Messages -->
+        @if (successMsg) {
+          <div class="alert alert-success">✅ {{ successMsg }}</div>
+        }
+        @if (errorMsg) {
+          <div class="alert alert-danger">❌ {{ errorMsg }}</div>
+        }
+
+        <!-- Donation Form -->
+        <form (ngSubmit)="submit()" class="donation-form">
+          <div class="form-group">
+            <label for="amount">المبلغ المراد التبرع به (جنيه مصري)</label>
+            <div class="amount-input-wrapper">
+              <span class="currency-symbol">ج.م</span>
+              <input
+                id="amount"
+                type="number"
+                [(ngModel)]="amount"
+                name="amount"
+                placeholder="أدخل المبلغ"
+                min="1"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Quick amounts -->
+          <div class="quick-amounts">
+            @for (q of [50, 100, 250, 500, 1000]; track q) {
+              <button type="button" class="quick-btn" (click)="amount = q">
+                {{ formatCurrency(q) }}
+              </button>
+            }
+          </div>
+
+          <button type="submit" class="btn btn-accent btn-block" [disabled]="submitting || !amount">
+            @if (submitting) { <span class="animate-pulse">جاري الإرسال...</span> }
+            @else { <span>تأكيد التبرع ❤️</span> }
+          </button>
+        </form>
+      </div>
+
+      <!-- ─── Right: My Donations History ──────────── -->
+      <div class="history-panel">
+        <h2 class="history-title">سجل تبرعاتي في هذا المجال</h2>
+
+        <!-- My running total -->
+        @if (myDonations.length > 0) {
+          <div class="my-total-box">
+            <span>مجموع ما تبرعت به</span>
+            <span class="my-total-value">{{ formatCurrency(myTotal) }}</span>
+          </div>
+        }
+
+        @if (myDonations.length === 0) {
+          <div class="empty-state">
+            <span>🤲</span>
+            <p>لم تتبرع في هذا المجال بعد<br>كن أول المتبرعين</p>
+          </div>
+        } @else {
+          <div class="donations-list">
+            @for (donation of myDonations; track donation.id) {
+              <div class="donation-item">
+                <div class="donation-info">
+                  <span class="donation-amount">{{ formatCurrency(donation.amount) }}</span>
+                  <span class="donation-date">{{ formatDate(donation.createdAt) }}</span>
+                </div>
+                <span class="donation-badge">✅</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+    </div>
+  }
+</div>

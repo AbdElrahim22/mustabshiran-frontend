@@ -1,0 +1,91 @@
+<div class="page-header">
+  <h2>الدلائل</h2>
+  <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
+    <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearch()" placeholder="🔍 بحث عن دليل..." style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-dark); color:var(--text-primary); outline:none;">
+    <button class="btn btn-outline" (click)="exportExcel()">Excel</button>
+    <button class="btn btn-outline" (click)="exportPdf()">PDF</button>
+    <button class="btn btn-primary" (click)="openAdd()">+ إضافة دليل</button>
+  </div>
+</div>
+
+@if (loading) { <div class="spinner"></div> }
+
+<div class="table-wrapper">
+  <table class="data-table" id="exportable-table">
+    <thead>
+      <tr>
+        <th>الاسم</th><th>الهاتف</th><th>المكان</th><th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (g of pagedGuides; track g.id) {
+        <tr>
+          <td data-label="الاسم"><strong>{{ g.name }}</strong></td>
+          <td data-label="الهاتف">{{ g.phoneNumber }}</td>
+          <td data-label="المكان">{{ g.location || '—' }}</td>
+          <td class="action-cell" data-label="إجراءات">
+            <button class="btn-icon" (click)="openEdit(g)" title="تعديل">✏️</button>
+            <button class="btn-icon danger" (click)="delete(g.id)" title="حذف">🗑️</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="4" class="empty-cell">لا يوجد دلائل حالياً</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+@if (totalPages > 1) {
+  <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap;">
+    <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
+      style="padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); cursor: pointer;"
+      [style.opacity]="currentPage === 1 ? '0.4' : '1'">‹ السابق</button>
+
+    @for (p of [].constructor(totalPages); track $index) {
+      <button (click)="goToPage($index + 1)"
+        [style.background]="currentPage === $index + 1 ? 'var(--primary)' : 'var(--bg-dark)'"
+        [style.color]="currentPage === $index + 1 ? '#fff' : 'var(--text-secondary)'"
+        style="width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-weight: 600;">{{ $index + 1 }}</button>
+    }
+
+    <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
+      style="padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text-primary); cursor: pointer;"
+      [style.opacity]="currentPage === totalPages ? '0.4' : '1'">التالي ›</button>
+
+    <span style="color: var(--text-secondary); font-size: 0.85rem;">صفحة {{ currentPage }} من {{ totalPages }} | إجمالي {{ filteredGuides.length }} دليل</span>
+  </div>
+}
+
+<!-- Modal -->
+@if (showModal) {
+  <div class="modal-overlay">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h2>{{ editingGuide ? 'تعديل بيانات الدليل' : 'إضافة دليل جديد' }}</h2>
+      <form (ngSubmit)="submit()">
+        <div class="form-group">
+          <label>الاسم</label>
+          <input type="text" [(ngModel)]="form.name" name="name" required />
+        </div>
+        <div class="form-group">
+          <label>رقم الهاتف</label>
+          <input type="tel" [(ngModel)]="form.phoneNumber" name="phoneNumber" 
+                 #phone="ngModel" required minlength="11" maxlength="11" pattern="^[0-9]*$" />
+          @if (phone.invalid && (phone.dirty || phone.touched)) {
+            <div class="error-text">يجب إدخال 11 رقم موبايل بشكل صحيح</div>
+          }
+        </div>
+        <div class="form-group">
+          <label>المكان (اختياري)</label>
+          <input type="text" [(ngModel)]="form.location" name="location" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showModal = false">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="submitting || phone.invalid || !form.name">{{ submitting ? 'جاري...' : 'حفظ' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
