@@ -651,12 +651,54 @@
   overflow: hidden !important;
 }
 
+/* Mobile Tabs - hidden on desktop */
+.mobile-modal-tabs {
+  display: none;
+  background: var(--bg-card2);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  gap: 0.5rem;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  padding: 0.65rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  &.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(46, 158, 91, 0.3);
+  }
+}
+
+/* Hide panel on mobile when not active tab */
+.mobile-hidden {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
 .modal-split {
   display: flex;
   min-height: 450px;
   
   @media (max-width: 768px) { flex-direction: column; }
 }
+
 
 .modal-form-side {
   flex: 1.2;

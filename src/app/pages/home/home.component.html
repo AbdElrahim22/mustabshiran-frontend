@@ -444,10 +444,21 @@
 @if (donationModal) {
   <div class="modal-overlay">
     <div class="modal-content wide-modal" (click)="$event.stopPropagation()">
+
+      <!-- Mobile Tabs (only visible on small screens) -->
+      <div class="mobile-modal-tabs">
+        <button class="mobile-tab-btn" [class.active]="activeModalTab === 'form'" (click)="activeModalTab = 'form'">
+          📝 نموذج التبرع
+        </button>
+        <button class="mobile-tab-btn" [class.active]="activeModalTab === 'history'" (click)="activeModalTab = 'history'">
+          📋 حافظة تبرعاتي
+        </button>
+      </div>
+
       <div class="modal-split">
         
         <!-- Right Side: Donation Form -->
-        <div class="modal-form-side">
+        <div class="modal-form-side" [class.mobile-hidden]="activeModalTab !== 'form'">
           <div class="modal-header">
             <h3>تبرع لـ: {{ selectedCategory?.name }}</h3>
             <button class="close-btn" (click)="donationModal = false">×</button>
@@ -529,7 +540,7 @@
         </div>
 
         <!-- Left Side: History Sheet -->
-        <div class="modal-history-side">
+        <div class="modal-history-side" [class.mobile-hidden]="activeModalTab !== 'history'">
           <div class="sheet-container">
             <div class="sheet-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
               <div>
@@ -573,6 +584,7 @@
     </div>
   </div>
 }
+
 
 
 <!-- ─── Footer ────────────────────────────────────────────────────── -->

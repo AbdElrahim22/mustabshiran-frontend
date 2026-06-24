@@ -34,6 +34,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   mobileMenuOpen = false;
   financialAdmins: any[] = [];
   searchQuery = '';
+  activeModalTab: 'form' | 'history' = 'form';
 
   // Date-based view state
   isDateModalOpen = false;
@@ -232,6 +233,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.selectedCategory = cat;
     this.donationForm = { amount: null, donorName: '', notes: '', assignedUserId: '', targetCategoryId: '' };
     this.donationModal = true;
+    this.activeModalTab = 'form';
     this.fetchMyDonations();
   }
 
